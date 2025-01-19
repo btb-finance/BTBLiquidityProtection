@@ -1,30 +1,39 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.24;
 
 import {Test} from "forge-std/Test.sol";
-import {BTBHook} from "../../src/hooks/BTBHook.sol";
-import {IPoolManager} from "@uniswap/v4-core/contracts/interfaces/IPoolManager.sol";
-import {Hooks} from "@uniswap/v4-core/contracts/libraries/Hooks.sol";
+import {BTBHook, BTBHookTest} from "../../src/hooks/BTBHook.sol";
+import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
+import {Hooks} from "@uniswap/v4-core/src/libraries/Hooks.sol";
 
-contract BTBHookTest is Test {
+contract BTBHookUnitTest is Test {
     BTBHook public hook;
+    IPoolManager public manager;
 
     function setUp() public {
-        // Deploy a mock pool manager
-        address mockPoolManager = makeAddr("poolManager");
-        hook = new BTBHook(IPoolManager(mockPoolManager));
+        // Create a mock pool manager
+        manager = IPoolManager(makeAddr("poolManager"));
+        
+        // Deploy the test version of the hook
+        hook = new BTBHookTest(manager);
     }
 
-    function test_HooksCalls() public {
-        Hooks.Calls memory hooks = hook.getHooksCalls();
+    function test_HookPermissions() public {
+        Hooks.Permissions memory permissions = hook.getHookPermissions();
         
-        assertFalse(hooks.beforeInitialize);
-        assertFalse(hooks.afterInitialize);
-        assertFalse(hooks.beforeModifyPosition);
-        assertFalse(hooks.afterModifyPosition);
-        assertFalse(hooks.beforeSwap);
-        assertFalse(hooks.afterSwap);
-        assertFalse(hooks.beforeDonate);
-        assertFalse(hooks.afterDonate);
+        assertFalse(permissions.beforeInitialize);
+        assertFalse(permissions.afterInitialize);
+        assertFalse(permissions.beforeAddLiquidity);
+        assertFalse(permissions.afterAddLiquidity);
+        assertFalse(permissions.beforeRemoveLiquidity);
+        assertFalse(permissions.afterRemoveLiquidity);
+        assertFalse(permissions.beforeSwap);
+        assertFalse(permissions.afterSwap);
+        assertFalse(permissions.beforeDonate);
+        assertFalse(permissions.afterDonate);
+        assertFalse(permissions.beforeSwapReturnDelta);
+        assertFalse(permissions.afterSwapReturnDelta);
+        assertFalse(permissions.afterAddLiquidityReturnDelta);
+        assertFalse(permissions.afterRemoveLiquidityReturnDelta);
     }
 }

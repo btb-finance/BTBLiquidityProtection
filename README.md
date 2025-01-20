@@ -1,282 +1,116 @@
-<<<<<<< HEAD
-## Foundry
+# BTB Liquidity Protection V4 - Foundry Implementation
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
-
-Foundry consists of:
-
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
-
-## Documentation
-
-https://book.getfoundry.sh/
-
-## Usage
-
-### Build
-
-```shell
-$ forge build
-```
-
-### Test
-
-```shell
-$ forge test
-```
-
-### Format
-
-```shell
-$ forge fmt
-```
-
-### Gas Snapshots
-
-```shell
-$ forge snapshot
-```
-
-### Anvil
-
-```shell
-$ anvil
-```
-
-### Deploy
-
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
-
-# Liquidity Protection Hook for Uniswap v4
-
-A Uniswap v4 hook that provides liquidity protection mechanisms including impermanent loss protection and fee distribution for liquidity providers.
+A Uniswap V4 hook implementation providing advanced liquidity protection mechanisms, featuring impermanent loss protection and enhanced fee distribution. Built with Foundry for Ethereum development.
 
 ## Features
 
-- **Impermanent Loss Protection**: Compensates liquidity providers for impermanent loss using a dedicated reserve pool
-- **Fee Distribution System**: 
+**Core Protection Mechanisms:**
+- Impermanent Loss Protection with reserve pool
+- Dynamic Fee Distribution:
   - 80% to Liquidity Providers
   - 15% to IL Protection Reserve
   - 5% to Governance Token Holders
-- **Price Feed Integration**: Uses Chainlink price feeds for accurate asset valuation
-- **Flexible Hook Permissions**: Implements multiple hook points for comprehensive liquidity management
+- Liquidity Provider Rewards System
+- Position Management Utilities
+
+**Advanced Functionality:**
+- Chainlink Price Feed Integration
+- Flexible Hook Permissions:
+  - Before/After Add/Remove Liquidity
+  - Before/After Swap
+  - Delta Return capabilities
+- CREATE2 Deployment Support
 
 ## Architecture
 
 ### Core Components
+- **LiquidityProtectionHook.sol**  
+  Main hook contract inheriting from Uniswap v4's BaseHook
+- **BTBHook.sol**  
+  Core implementation for position tracking and fee management
+- **MockPriceFeed.sol**  
+  Test implementation of Chainlink's AggregatorV3Interface
+- **HookDeployer.sol**  
+  CREATE2 utility for deterministic deployments
 
-1. **LiquidityProtectionHook.sol**
-   - Main hook contract implementing the protection mechanisms
-   - Inherits from Uniswap v4's BaseHook
-   - Manages fee distribution and IL protection
-
-2. **MockPriceFeed.sol**
-   - Test implementation of Chainlink's AggregatorV3Interface
-   - Used for testing price feed functionality
-
-3. **HookDeployer.sol**
-   - Utility contract for deploying hooks with correct permission flags
-   - Uses CREATE2 for deterministic address generation
-
-### Hook Permissions
-
-The hook implements the following permission flags:
-- Before/After Add Liquidity
-- Before/After Remove Liquidity
-- Before/After Swap
-- Delta Return capabilities for precise fee calculations
-
-## Installation
-
-```bash
-# Clone the repository
-git clone https://github.com/yourusername/BTBLiquidityProtection.git
-cd BTBLiquidityProtection
-
-# Install dependencies
-forge install
-```
-
-## Testing
-
-```bash
-# Run all tests
-forge test --ffi
-
-# Run specific test
-forge test --match-test test_HookRegistration -vvv
-```
+### System Integration
+- Price Oracle: Chainlink with fallback mechanisms
+- Fee Distribution: Atomic operations with reentrancy protection
+- Access Control: Owner-restricted critical functions
 
 ## Development Setup
 
 ### Prerequisites
-
-- [Foundry](https://github.com/foundry-rs/foundry)
+- Foundry
 - Solidity ^0.8.26
-- Node.js (optional, for deployment scripts)
+- Node.js (for deployment scripts)
 
-### Environment Setup
-
-1. Install Foundry:
+### Installation
 ```bash
-curl -L https://foundry.paradigm.xyz | bash
-foundryup
-```
-
-2. Build the project:
-=======
-# BTB Liquidity Protection V4
-
-A Uniswap V4 hook implementation for BTB Liquidity Protection, designed to protect liquidity providers from impermanent loss and enhance their trading experience.
-
-## Overview
-
-This project implements Uniswap V4 hooks to provide advanced liquidity protection features:
-
-- Impermanent Loss Protection
-- Dynamic Fee Adjustment
-- Liquidity Provider Rewards
-- Position Management
-
-## Architecture
-
-The project consists of several key components:
-
-- `BTBHook.sol`: Core hook implementation for Uniswap V4 integration
-- Position tracking and management
-- Fee collection and distribution
-- Price oracle integration
-
-## Development
-
-### Prerequisites
-
-- [Foundry](https://book.getfoundry.sh/getting-started/installation.html)
-- Solidity ^0.8.24
-
-### Setup
-
-1. Clone the repository:
-```bash
+# Clone repository
 git clone https://github.com/btb-finance/BTBLiquidityProtection.git
 cd BTBLiquidityProtection
-```
 
-2. Install dependencies:
-```bash
+# Install dependencies
 forge install
-```
 
-3. Build the project:
->>>>>>> 4ae34a813f805edafd93e61790365f4d5212f94f
-```bash
+# Build project
 forge build
-```
-
-<<<<<<< HEAD
-## Contract Deployment
-
-1. Deploy to testnet:
-```bash
-forge script script/Deploy.s.sol:Deploy --rpc-url $RPC_URL --private-key $PRIVATE_KEY
-```
-
-2. Verify contract:
-```bash
-forge verify-contract $CONTRACT_ADDRESS src/hooks/LiquidityProtectionHook.sol:LiquidityProtectionHook
 ```
 
 ## Usage
 
-### Setting Up Price Feeds
+### Testing
+```bash
+# Run all tests
+forge test --ffi
 
-```solidity
-// Set price feed for a pool
-hook.setPriceFeed(poolKey, PRICE_FEED_ADDRESS);
+# Run specific test with verbosity
+forge test --match-test test_HookRegistration -vvv
 ```
 
-### Managing Voter Shares
+### Deployment
+```bash
+# Deploy to network
+forge script script/Deploy.s.sol:Deploy --rpc-url $RPC_URL --private-key $PRIVATE_KEY
 
+# Verify contract
+forge verify-contract $CONTRACT_ADDRESS src/hooks/LiquidityProtectionHook.sol:LiquidityProtectionHook
+```
+
+### Key Operations
 ```solidity
+// Set price feed for pool
+hook.setPriceFeed(poolKey, PRICE_FEED_ADDRESS);
+
 // Update voter shares
 hook.updateVoterShares(voterAddress, newShares);
-```
 
-### Claiming IL Protection
-
-```solidity
-// Claim IL protection for a position
+// Claim IL protection
 hook.claimILProtection(poolKey, positionId);
 ```
 
-## Security Considerations
+## Security
 
-1. **Price Feed Reliability**: 
-   - Uses Chainlink price feeds for reliable price data
-   - Implements fallback mechanisms for price feed failures
-
-2. **Access Control**:
-   - Owner-only functions for critical operations
-   - Protected hook functions with proper modifiers
-
-3. **Fee Distribution**:
-   - Atomic operations for fee distribution
-   - Protected against reentrancy attacks
+### Key Considerations
+- **Price Reliability:** Chainlink feeds with fallback mechanisms
+- **Access Controls:** Owner-restricted critical functions
+- **Fee Safety:** Atomic distribution operations
+- **Reentrancy Protection:** Secure modifiers on all hook functions
 
 ## Contributing
 
 1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+2. Create feature branch: `git checkout -b feature/new-feature`
+3. Commit changes: `git commit -m 'Add new feature'`
+4. Push to branch: `git push origin feature/new-feature`
+5. Open Pull Request
 
 ## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT - See [LICENSE](LICENSE) for details
 
 ## Acknowledgments
-
-- Uniswap v4 Team for the hook system architecture
-- Chainlink for price feed infrastructure
-- OpenZeppelin for secure contract implementations
-=======
-4. Run tests:
-```bash
-forge test
-```
-
-### Testing
-
-The project includes comprehensive tests:
-- Unit tests for hook functionality
-- Integration tests with Uniswap V4
-- Mock contracts for testing
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## License
-
-MIT
->>>>>>> 4ae34a813f805edafd93e61790365f4d5212f94f
+- Uniswap v4 Team for hook architecture
+- Chainlink for oracle infrastructure
+- OpenZeppelin for security patterns
+- Paradigm for Foundry toolkit

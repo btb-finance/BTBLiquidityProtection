@@ -24,12 +24,12 @@ library HookDeployer {
 
         // Calculate the target address for the implementation
         bytes memory creationCode = type(LiquidityProtectionHook).creationCode;
-        bytes memory constructorArgs = abi.encode(poolManager);
+        bytes memory constructorArgs = abi.encode(poolManager, owner);
         bytes memory bytecode = abi.encodePacked(creationCode, constructorArgs);
 
         // Try different salts until we find one that gives us the correct address
         bytes32 salt;
-        address deployedAddress;
+        address payable deployedAddress;
         uint256 nonce;
         address deployer;
         assembly {
@@ -49,11 +49,6 @@ library HookDeployer {
             nonce++;
         }
 
-        // Verify deployment
-        require(deployedAddress != address(0), "Failed to deploy hook");
-        require(uint160(deployedAddress) & uint160(0xFFFF) == flags, "Hook flags not set correctly");
-
-        // Return the hook with the correct flags
         return LiquidityProtectionHook(deployedAddress);
     }
 

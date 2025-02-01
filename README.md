@@ -1,116 +1,115 @@
-# BTB Liquidity Protection V4 - Foundry Implementation
+# BTB Liquidity Protection Hook
 
-A Uniswap V4 hook implementation providing advanced liquidity protection mechanisms, featuring impermanent loss protection and enhanced fee distribution. Built with Foundry for Ethereum development.
+A Uniswap V4 hook designed to protect liquidity providers from impermanent loss by providing compensation in BTB tokens.
+
+## Overview
+
+The BTB Liquidity Protection Hook is a sophisticated smart contract that integrates with Uniswap V4 pools to provide protection against impermanent loss for liquidity providers. When LPs experience a loss upon removing their liquidity, they receive compensation in BTB tokens based on the USD value of their loss.
 
 ## Features
 
-**Core Protection Mechanisms:**
-- Impermanent Loss Protection with reserve pool
-- Dynamic Fee Distribution:
-  - 80% to Liquidity Providers
-  - 15% to IL Protection Reserve
-  - 5% to Governance Token Holders
-- Liquidity Provider Rewards System
-- Position Management Utilities
+### Liquidity Protection
+- Tracks initial USD value of liquidity provided
+- Calculates losses when liquidity is removed
+- Automatically compensates LPs with BTB tokens for their losses
+- Supports multiple positions per user
 
-**Advanced Functionality:**
-- Chainlink Price Feed Integration
-- Flexible Hook Permissions:
-  - Before/After Add/Remove Liquidity
-  - Before/After Swap
-  - Delta Return capabilities
-- CREATE2 Deployment Support
+### Governance
+- Owner-controlled BTB token address and price settings
+- Voter share system for potential governance decisions
+- Impermanent Loss (IL) reserve for future enhancements
 
-## Architecture
+### Administrative Functions
+- Owner can update BTB token address and price
+- Owner can manage voter shares
+- Emergency functions to recover tokens or ETH
+- IL reserve funding mechanism
 
-### Core Components
-- **LiquidityProtectionHook.sol**  
-  Main hook contract inheriting from Uniswap v4's BaseHook
-- **BTBHook.sol**  
-  Core implementation for position tracking and fee management
-- **MockPriceFeed.sol**  
-  Test implementation of Chainlink's AggregatorV3Interface
-- **HookDeployer.sol**  
-  CREATE2 utility for deterministic deployments
+## Key Components
 
-### System Integration
-- Price Oracle: Chainlink with fallback mechanisms
-- Fee Distribution: Atomic operations with reentrancy protection
-- Access Control: Owner-restricted critical functions
+### BTB Token Integration
+- BTB tokens are used as the compensation currency
+- Token price is maintained in USD (18 decimal precision)
+- Example: If 1 BTB = $1, then `btbTokenPrice = 1e18`
 
-## Development Setup
+### Investment Tracking
+- Records initial USD value when liquidity is added
+- Compares final value when liquidity is removed
+- Calculates loss and provides appropriate compensation
 
-### Prerequisites
-- Foundry
-- Solidity ^0.8.26
-- Node.js (for deployment scripts)
-
-### Installation
-```bash
-# Clone repository
-git clone https://github.com/btb-finance/BTBLiquidityProtection.git
-cd BTBLiquidityProtection
-
-# Install dependencies
-forge install
-
-# Build project
-forge build
-```
+### Hook Callbacks
+1. `beforeAddLiquidity`: Pass-through callback
+2. `afterAddLiquidity`: Records initial investment value
+3. `beforeRemoveLiquidity`: Pass-through callback
+4. `afterRemoveLiquidity`: Calculates loss and provides compensation
+5. `beforeSwap` & `afterSwap`: Pass-through callbacks
 
 ## Usage
 
+### For Liquidity Providers
+1. Add liquidity to a Uniswap V4 pool using this hook
+2. Your initial investment value is automatically recorded
+3. When removing liquidity:
+   - If value has decreased: Receive BTB tokens as compensation
+   - If value has increased or stayed same: No compensation needed
+
+### For Administrators
+1. Set BTB token address:
+```solidity
+hook.setBTBToken(address _btbToken)
+```
+
+2. Update BTB token price:
+```solidity
+hook.setBTBTokenPrice(uint256 newPrice)
+```
+
+3. Manage voter shares:
+```solidity
+hook.updateVoterShares(address voter, uint256 shares)
+```
+
+4. Fund IL reserve:
+```solidity
+hook.fundILReserve(uint256 amount)
+```
+
+## Security Features
+- All admin functions are protected by OpenZeppelin's `Ownable`
+- Zero-address checks for critical parameters
+- Balance checks before token transfers
+- ETH receiving capability for future enhancements
+
+## Events
+- `VoterSharesUpdated`: Emitted when voter shares are modified
+- `ILReserveFunded`: Emitted when IL reserve receives funding
+- `ILCompensationPaid`: Emitted when compensation is paid to an LP
+- `BTBTokenUpdated`: Emitted when BTB token address is updated
+- `BTBTokenPriceUpdated`: Emitted when BTB token price is updated
+
+## Dependencies
+- OpenZeppelin Contracts v5.2.0
+- Uniswap V4 Core
+- Uniswap V4 Periphery
+
+## Development
+
+### Prerequisites
+- Foundry
+- Node.js
+- Git
+
+### Installation
+```bash
+git clone https://github.com/your-repo/BTBLiquidityProtection
+cd BTBLiquidityProtection
+forge install
+```
+
 ### Testing
 ```bash
-# Run all tests
-forge test --ffi
-
-# Run specific test with verbosity
-forge test --match-test test_HookRegistration -vvv
+forge test
 ```
-
-### Deployment
-```bash
-# Deploy to network
-forge script script/Deploy.s.sol:Deploy --rpc-url $RPC_URL --private-key $PRIVATE_KEY
-
-# Verify contract
-forge verify-contract $CONTRACT_ADDRESS src/hooks/LiquidityProtectionHook.sol:LiquidityProtectionHook
-```
-
-### Key Operations
-```solidity
-// Set price feed for pool
-hook.setPriceFeed(poolKey, PRICE_FEED_ADDRESS);
-
-// Update voter shares
-hook.updateVoterShares(voterAddress, newShares);
-
-// Claim IL protection
-hook.claimILProtection(poolKey, positionId);
-```
-
-## Security
-
-### Key Considerations
-- **Price Reliability:** Chainlink feeds with fallback mechanisms
-- **Access Controls:** Owner-restricted critical functions
-- **Fee Safety:** Atomic distribution operations
-- **Reentrancy Protection:** Secure modifiers on all hook functions
-
-## Contributing
-
-1. Fork the repository
-2. Create feature branch: `git checkout -b feature/new-feature`
-3. Commit changes: `git commit -m 'Add new feature'`
-4. Push to branch: `git push origin feature/new-feature`
-5. Open Pull Request
 
 ## License
-MIT - See [LICENSE](LICENSE) for details
-
-## Acknowledgments
-- Uniswap v4 Team for hook architecture
-- Chainlink for oracle infrastructure
-- OpenZeppelin for security patterns
-- Paradigm for Foundry toolkit
+MIT

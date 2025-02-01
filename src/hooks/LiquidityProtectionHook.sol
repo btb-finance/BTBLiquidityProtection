@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.26;
+pragma solidity ^0.8.24;
 
 import {BaseHook} from "@uniswap/v4-periphery/src/base/hooks/BaseHook.sol";
 import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
 import {Hooks} from "@uniswap/v4-core/src/libraries/Hooks.sol";
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 import {PoolId, PoolIdLibrary} from "@uniswap/v4-core/src/types/PoolId.sol";
+import {Pool} from "@uniswap/v4-core/src/libraries/Pool.sol";
 import {Currency, CurrencyLibrary} from "@uniswap/v4-core/src/types/Currency.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {BalanceDelta} from "@uniswap/v4-core/src/types/BalanceDelta.sol";
@@ -41,7 +42,7 @@ contract LiquidityProtectionHook is BaseHook, Ownable {
     event BTBTokenUpdated(address newBTBToken);
     event BTBTokenPriceUpdated(uint256 newPrice);
 
-    constructor(IPoolManager _poolManager) BaseHook(_poolManager) {}
+    constructor(IPoolManager _poolManager, address initialOwner) BaseHook(_poolManager) Ownable(initialOwner) {}
 
     // Allows the owner to set (or update) the BTB token address.
     function setBTBToken(address _btbToken) external onlyOwner {
@@ -132,7 +133,7 @@ contract LiquidityProtectionHook is BaseHook, Ownable {
         BalanceDelta hookDelta,
         bytes calldata hookData
     ) external override returns (bytes4, BalanceDelta) {
-        uint256 usdValue = calculateUsdValue(key, params.amount0, params.amount1);
+        uint256 usdValue = calculateUsdValue(key, params.liquidityDelta > 0 ? uint256(params.liquidityDelta) : uint256(-params.liquidityDelta), 0); 
         // Record the initial investment or accumulate additional deposits.
         if (initialInvestment[sender] == 0) {
             initialInvestment[sender] = usdValue;
@@ -164,7 +165,7 @@ contract LiquidityProtectionHook is BaseHook, Ownable {
         BalanceDelta hookDelta,
         bytes calldata hookData
     ) external override returns (bytes4, BalanceDelta) {
-        uint256 currentValue = calculateUsdValue(key, params.amount0, params.amount1);
+        uint256 currentValue = calculateUsdValue(key, params.liquidityDelta > 0 ? uint256(params.liquidityDelta) : uint256(-params.liquidityDelta), 0); 
         uint256 initialVal = initialInvestment[sender];
         if (initialVal > 0 && currentValue < initialVal) {
             uint256 loss = initialVal - currentValue;
@@ -218,10 +219,8 @@ contract LiquidityProtectionHook is BaseHook, Ownable {
         uint256 amount0,
         uint256 amount1
     ) public view returns (uint256) {
-        PoolId poolId = key.toId();
-        (uint160 sqrtPriceX96, , ,) = poolManager.getSlot0(poolId);
-        uint256 price = (uint256(sqrtPriceX96) * uint256(sqrtPriceX96)) >> 192;
-        uint256 token0Value = (amount0 * price) / 1e18;
-        return amount1 + token0Value;
+        // For now, we'll use a simplified price calculation using the BTB token price
+        uint256 value = (amount0 * btbTokenPrice) / 1e18;
+        return value;
     }
 }

@@ -1,16 +1,29 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {BaseHook} from "v4-periphery/src/base/hooks/BaseHook.sol";
-import {Hooks} from "v4-core/src/libraries/Hooks.sol";
-import {IPoolManager} from "v4-core/src/interfaces/IPoolManager.sol";
-import {PoolKey} from "v4-core/src/types/PoolKey.sol";
-import {PoolId, PoolIdLibrary} from "v4-core/src/types/PoolId.sol";
-import {BalanceDelta} from "v4-core/src/types/BalanceDelta.sol";
+import {BaseHook} from "@uniswap/v4-periphery/src/base/hooks/BaseHook.sol";
+import {Hooks} from "@uniswap/v4-core/src/libraries/Hooks.sol";
+import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
+import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
+import {PoolId, PoolIdLibrary} from "@uniswap/v4-core/src/types/PoolId.sol";
+import {BalanceDelta} from "@uniswap/v4-core/src/types/BalanceDelta.sol";
+import {Currency} from "@uniswap/v4-core/src/types/Currency.sol";
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+
+interface AggregatorV3Interface {
+    function latestRoundData()
+        external
+        view
+        returns (
+            uint80 roundId,
+            int256 answer,
+            uint256 startedAt,
+            uint256 updatedAt,
+            uint80 answeredInRound
+        );
+}
 
 contract ImpermanentLossProtectionHook is BaseHook, Ownable {
     using PoolIdLibrary for PoolKey;
@@ -42,7 +55,7 @@ contract ImpermanentLossProtectionHook is BaseHook, Ownable {
         address _usdcToken,
         address _priceFeedToken0,
         address _priceFeedToken1
-    ) BaseHook(_poolManager) {
+    ) BaseHook(_poolManager) Ownable(msg.sender) {
         treasury = _treasury;
         usdcToken = _usdcToken;
 
@@ -77,10 +90,10 @@ contract ImpermanentLossProtectionHook is BaseHook, Ownable {
         IPoolManager.ModifyLiquidityParams calldata params,
         bytes calldata
     ) external override returns (bytes4) {
-        require(whitelistedTokens[address(key.currency0)] && whitelistedTokens[address(key.currency1)], "Token not whitelisted");
+        require(whitelistedTokens[Currency.unwrap(key.currency0)] && whitelistedTokens[Currency.unwrap(key.currency1)], "Token not whitelisted");
 
         // calculate initial value in usdc
-        uint256 valueInUSDC = _calculateLPValueInUSDC(key, params.amount0, params.amount1);
+        uint256 valueInUSDC = _calculateLPValueInUSDC(key, uint256(params.liquidityDelta), uint256(params.liquidityDelta));
 
         PoolId poolId = key.toId();
         userLiquidity[sender][poolId] = LiquidityInfo({
@@ -102,7 +115,7 @@ contract ImpermanentLossProtectionHook is BaseHook, Ownable {
         PoolId poolId = key.toId();
         LiquidityInfo storage info = userLiquidity[sender][poolId];
 
-        uint256 currentValueInUSDC = _calculateLPValueInUSDC(key, params.amount0, params.amount1);
+        uint256 currentValueInUSDC = _calculateLPValueInUSDC(key, uint256(params.liquidityDelta), uint256(params.liquidityDelta));
 
         // if lp is worth less than initial value, refund difference from treasury
         if (currentValueInUSDC < info.initialUSDCValue) {
@@ -116,13 +129,13 @@ contract ImpermanentLossProtectionHook is BaseHook, Ownable {
     function afterRemoveLiquidity(
         address sender,
         PoolKey calldata key,
-        IPoolManager.ModifyLiquidityParams calldata,
-        BalanceDelta delta,
+        IPoolManager.ModifyLiquidityParams calldata params,
+        BalanceDelta[] calldata balanceDeltas,
         bytes calldata
-    ) external override returns (bytes4, BalanceDelta) {
+    ) external returns (bytes4) {
         PoolId poolId = key.toId();
         delete userLiquidity[sender][poolId];
-        return (BaseHook.afterRemoveLiquidity.selector, delta);
+        return BaseHook.afterRemoveLiquidity.selector;
     }
 
     // ============================ FEE CLAIMING ============================
@@ -155,11 +168,11 @@ contract ImpermanentLossProtectionHook is BaseHook, Ownable {
         uint256 fee1User = feeEarned1 - fee1Platform;
 
         // transfer fees
-        if (fee0User > 0) IERC20(address(key.currency0)).transfer(msg.sender, fee0User);
-        if (fee1User > 0) IERC20(address(key.currency1)).transfer(msg.sender, fee1User);
+        if (fee0User > 0) IERC20(Currency.unwrap(key.currency0)).transfer(msg.sender, fee0User);
+        if (fee1User > 0) IERC20(Currency.unwrap(key.currency1)).transfer(msg.sender, fee1User);
 
-        if (fee0Platform > 0) IERC20(address(key.currency0)).transfer(treasury, fee0Platform);
-        if (fee1Platform > 0) IERC20(address(key.currency1)).transfer(treasury, fee1Platform);
+        if (fee0Platform > 0) IERC20(Currency.unwrap(key.currency0)).transfer(treasury, fee0Platform);
+        if (fee1Platform > 0) IERC20(Currency.unwrap(key.currency1)).transfer(treasury, fee1Platform);
     }
 
     // ============================ PRICE CALCULATION ============================
